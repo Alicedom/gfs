@@ -19,50 +19,48 @@ import java.util.concurrent.*;
 public class DownloadGfs025 {
 
     private final static Logger logger = LoggerFactory.getLogger(DownloadGfs025.class);
+    private ExecutorService threadPool;
 
-    public DownloadGfs025(int indexDir, int numberLink, String saveFolder, int threadSize, int timeOut) {
+    public DownloadGfs025(int numberDir, int numberLink, String saveFolder, int threadSize, int timeOut) {
 
+        threadPool = Executors.newFixedThreadPool(threadSize);
 
-        // bo file dau tien khong download????
-        String dirFromURL = getDirFromURL(indexDir);
-        logger.info("get last dir: " + dirFromURL);
+        for(int indexDir =0;indexDir<numberDir; indexDir++){
+            // bo file dau tien khong download????
+            String dirFromURL = getDirFromURL(indexDir);
 
-        if (dirFromURL == null || dirFromURL == "") {
-            logger.info("Not found dir on url");
-        } else if (new File(saveFolder + dirFromURL).exists() && (new File(saveFolder + dirFromURL).listFiles().length == 3 * numberLink)) {
-            logger.info(dirFromURL + " have enough data!!!");
-        } else {
-            List<String> list = getFileFromURL(numberLink, dirFromURL);
-            //bo qua file anlytic
-            list.remove(0);
-
-            if (list.size() < numberLink) {
-                logger.info(list.size() + " link  return do not enough: " + numberLink);
+            if (dirFromURL == null || dirFromURL == "") {
+                logger.info("Not found dir on url");
+            } else if (new File(saveFolder + dirFromURL).exists() && (new File(saveFolder + dirFromURL).listFiles().length == 3 * numberLink)) {
+                logger.info(dirFromURL + " have enough data!!!");
             } else {
-                logger.info("get enough file: " + list.size());
-                download(list, saveFolder, dirFromURL, threadSize, timeOut);
+                logger.info(" get dir "+dirFromURL);
+                List<String> list = getFileFromURL(numberLink, dirFromURL);
+
+                if (list.size() < numberLink) {
+//                    logger.info(list.size() + " link  return do not enough: " + numberLink);
+                } else {
+                    logger.info(dirFromURL+" number dir "+list.size());
+
+                    download(list, saveFolder, dirFromURL, timeOut);
+                }
             }
         }
-
+        threadPool.shutdown();
     }
 
-    public void download(List<String> list, String saveFolder, String dirFromURL, int threadSize, int timeOut) {
-        ExecutorService threadPool = Executors.newFixedThreadPool(threadSize);
-        CompletionService<String> pool = new ExecutorCompletionService<String>(threadPool);
+    public void download(List<String> list, String saveFolder, String dirFromURL, int timeOut) {
 
-        for (int i = 0; i < list.size(); i++) {
+        // bo qua file analitic
+        for (int i = 1; i < list.size(); i++) {
             String path = saveFolder + dirFromURL + "/" + String.valueOf(i);
             if (new File(path).exists() && new File(path + ".gbx9").exists() && new File(path + ".ncx3").exists()) {
-                //exist file
+                //exist file and read data
             } else {
-
                 Callable<String> r = new DownloadFileCallable(list.get(i), path, timeOut);
                 threadPool.submit(r);
-
             }
         }
-
-        threadPool.shutdown();
     }
 
 
@@ -96,7 +94,6 @@ public class DownloadGfs025 {
 
         Elements listFile = null;
         try {
-            fileURL = fileURL.replace("XXX", dir); // set dir
             Document fileDir = Jsoup.connect(urlPartFile + dir).timeout(30000).get();
             listFile = fileDir.select("body > form > p:nth-child(2) > select > option");
 
@@ -104,17 +101,18 @@ public class DownloadGfs025 {
             logger.error(e.getMessage());
         }
 
-        if (listFile.size() < numberFilePerDir) {
-            logger.info("Link do not enough file: " + listFile.size());
+//        get if enough data
+        if (listFile == null || listFile.size() == 0) {
+            logger.info(dir+" do not enough file: " + listFile.size());
         } else {
 
-            for (int i = 0; i <= numberFilePerDir; i++) {
+            fileURL = fileURL.replace("XXX", dir); // set dir
+            for (int i = 0; i < listFile.size() || i < numberFilePerDir; i++) {
                 String file = listFile.get(i).attr("value");
                 String urlDownload = fileURL.replace("YYY", file); // set file
                 linkedListURL.add(urlDownload);
             }
         }
-
         return linkedListURL;
     }
 
@@ -131,17 +129,14 @@ public class DownloadGfs025 {
         }
 
         public String call() {
-
             try {
-                logger.info("download file: "+fileName);
+                logger.info(fileName + " download and save data file: " +  link);
                 FileUtils.copyURLToFile(new URL(link), new File(fileName), timeout, timeout);
                 new RawGfs025().save(fileName);
             } catch (IOException | ParseException e) {
                 logger.error(e.getMessage());
             }
-
             return fileName;
-
         }
     }
 }

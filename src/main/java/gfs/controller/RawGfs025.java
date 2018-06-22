@@ -28,7 +28,7 @@ public class RawGfs025 {
         List<Gfs025> gfs025List = null;
         try {
             gfs025List = gribPlugin(listStation, file);
-            logger.info(gfs025List.size() + " get Gfs list: " + file);
+            logger.info(gfs025List.size() + " save data Gfs file: " + file);
             dao.saveHourlyData(gfs025List, file);
         } catch (IOException e) {
             e.printStackTrace();
@@ -36,6 +36,7 @@ public class RawGfs025 {
             dao.close();
         }
     }
+
 
     public List<Gfs025> gribPlugin(List<Station> listStation, String gribFile) throws IOException {
         List<Gfs025> gfs025List = new ArrayList<Gfs025>();
@@ -63,7 +64,6 @@ public class RawGfs025 {
                     if (unit.equals("K")) {
                         val = val - 273.15;
                     }
-
                     gfs025.setObjectData(fullname, val);
                 }
 

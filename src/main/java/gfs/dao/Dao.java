@@ -20,7 +20,7 @@ public class Dao {
     private Connection conn = null;
 
 
-    private String hostName = "localhost";
+    private String hostName = "172.16.0.252";
     private String dbName = "fieldclimate";
     private String userName = "root";
     private String password = "123456aA";
@@ -198,6 +198,7 @@ public class Dao {
                 statement.setDouble(13, gfs.getWind_speed());
                 statement.setDouble(14, gfs.getWind_degree());
                 statement.setString(15, gfs.getWind_direct());
+//                System.out.println("statement = " + statement.toString());
 
                 statement.addBatch();
                 statement.executeBatch();
