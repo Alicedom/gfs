@@ -20,21 +20,25 @@ public class RawGfs025 {
 
     private final static Logger logger = LoggerFactory.getLogger(RawGfs025.class);
 
-    public void save(String file) throws ParseException {
+    public void save(String file) {
 
         Dao dao = new Dao();
         List<Station> listStation = dao.getStationEnalbeApi();
+        String get_time = Utils.getCurTime();
 
         List<Gfs025> gfs025List = null;
         try {
-            gfs025List = gribPlugin(listStation, file);
-            logger.info(gfs025List.size() + " save data Gfs file: " + file);
-            dao.saveHourlyData(gfs025List, file);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }finally {
+            if (listStation != null) {
+                gfs025List = gribPlugin(listStation, file);
+                logger.info(gfs025List.size() + " save data: " + file);
+                dao.saveHourlyData(gfs025List, file, get_time);
+            }
+        } catch (IOException | ParseException e) {
+            logger.error(e.getMessage());
+        } finally {
             dao.close();
         }
+
     }
 
 
@@ -42,7 +46,7 @@ public class RawGfs025 {
         List<Gfs025> gfs025List = new ArrayList<Gfs025>();
 
         File file = new File(gribFile);
-        if(file.exists()){
+        if (file.exists()) {
             GridDataset gds = GridDataset.open(gribFile);
             List<GridDatatype> types = gds.getGrids();
 
@@ -75,10 +79,9 @@ public class RawGfs025 {
                 gfs025List.add(gfs025);
 
             }
-        }else{
-            logger.info("File not found: "+ gribFile);
+        } else {
+            logger.info("File not found: " + gribFile);
         }
-
 
 
         return gfs025List;

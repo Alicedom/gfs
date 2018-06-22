@@ -1,5 +1,6 @@
 package gfs.controller;
 
+import gfs.dao.Dao;
 import org.apache.commons.io.FileUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -10,57 +11,72 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class DownloadGfs025 {
 
     private final static Logger logger = LoggerFactory.getLogger(DownloadGfs025.class);
-    private ExecutorService threadPool;
 
     public DownloadGfs025(int numberDir, int numberLink, String saveFolder, int threadSize, int timeOut) {
+        ExecutorService threadPool = Executors.newFixedThreadPool(threadSize);
 
-        threadPool = Executors.newFixedThreadPool(threadSize);
 
-        for(int indexDir =0;indexDir<numberDir; indexDir++){
-            // bo file dau tien khong download????
+        for (int indexDir = 0; indexDir < numberDir; indexDir++) {
+
             String dirFromURL = getDirFromURL(indexDir);
 
             if (dirFromURL == null || dirFromURL == "") {
                 logger.info("Not found dir on url");
-            } else if (new File(saveFolder + dirFromURL).exists() && (new File(saveFolder + dirFromURL).listFiles().length == 3 * numberLink)) {
+            } else if (new File(saveFolder + dirFromURL).exists() && (new File(saveFolder + dirFromURL).listFiles().length  >= 3 * numberLink)) {
                 logger.info(dirFromURL + " have enough data!!!");
             } else {
-                logger.info(" get dir "+dirFromURL);
-                List<String> list = getFileFromURL(numberLink, dirFromURL);
+                logger.info(" get dir " + dirFromURL);
 
-                if (list.size() < numberLink) {
-//                    logger.info(list.size() + " link  return do not enough: " + numberLink);
+                Dao dao = new Dao();
+                Map<String, Integer> map = dao.getAllFile(dirFromURL);
+                if (map.size() == numberLink) {
+                    logger.info("data saved enough");
                 } else {
-                    logger.info(dirFromURL+" number dir "+list.size());
+                    logger.info(dirFromURL+ " dir save hour "+map.size());
 
-                    download(list, saveFolder, dirFromURL, timeOut);
+                    List<String> list = getFileFromURL(numberLink, dirFromURL);
+
+                    if (list == null || list.size() == 0) {
+                        logger.info(list.size() + " link  return do not enough: " + numberLink);
+                    } else {
+                        logger.info(dirFromURL + " number url " + list.size());
+
+                        for (int i = 0; i < list.size() && i < numberLink; i++) {
+                            if (map.containsKey(i)) {
+
+                            } else {
+                                String path = saveFolder + dirFromURL + "/" + String.valueOf(i);
+                                if (new File(path).exists() && new File(path + ".gbx9").exists() && new File(path + ".ncx3").exists()) {
+                                    // have file, don't need to download, try to save data again
+                                    new RawGfs025().save(path);
+
+                                } else {
+                                    Callable<String> r = new DownloadFileCallable(list.get(i), path, timeOut);
+                                    threadPool.submit(r);
+                                }
+                            }
+                        }
+                    }
                 }
+                dao.close();
+
             }
         }
+
+        logger.info("finish scan");
+
         threadPool.shutdown();
-    }
-
-    public void download(List<String> list, String saveFolder, String dirFromURL, int timeOut) {
-
-        // bo qua file analitic
-        for (int i = 1; i < list.size(); i++) {
-            String path = saveFolder + dirFromURL + "/" + String.valueOf(i);
-            if (new File(path).exists() && new File(path + ".gbx9").exists() && new File(path + ".ncx3").exists()) {
-                //exist file and read data
-            } else {
-                Callable<String> r = new DownloadFileCallable(list.get(i), path, timeOut);
-                threadPool.submit(r);
-            }
-        }
     }
 
 
@@ -74,10 +90,10 @@ public class DownloadGfs025 {
         String lastDir = null;
         try {
             Document docDir;
-            docDir = Jsoup.connect(urlDir).timeout(30000).get();
+            docDir = Jsoup.connect(urlDir).timeout(300000).get();
             lastDir = docDir.select("table > tbody > tr > td > a").get(indexDir).text().trim(); // back to second link
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error(e.getMessage());
         }
 
@@ -94,20 +110,20 @@ public class DownloadGfs025 {
 
         Elements listFile = null;
         try {
-            Document fileDir = Jsoup.connect(urlPartFile + dir).timeout(30000).get();
+            Document fileDir = Jsoup.connect(urlPartFile + dir).timeout(300000).get();
             listFile = fileDir.select("body > form > p:nth-child(2) > select > option");
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error(e.getMessage());
         }
 
-//        get if enough data
-        if (listFile == null || listFile.size() == 0) {
-            logger.info(dir+" do not enough file: " + listFile.size());
+        if (listFile == null || listFile.size() < 1) {
+            // no file
         } else {
 
+            // pass analitic file
             fileURL = fileURL.replace("XXX", dir); // set dir
-            for (int i = 0; i < listFile.size() || i < numberFilePerDir; i++) {
+            for (int i = 1; i < listFile.size(); i++) {
                 String file = listFile.get(i).attr("value");
                 String urlDownload = fileURL.replace("YYY", file); // set file
                 linkedListURL.add(urlDownload);
@@ -130,10 +146,10 @@ public class DownloadGfs025 {
 
         public String call() {
             try {
-                logger.info(fileName + " download and save data file: " +  link);
+                logger.info(fileName + " download and save data file: " + link);
                 FileUtils.copyURLToFile(new URL(link), new File(fileName), timeout, timeout);
                 new RawGfs025().save(fileName);
-            } catch (IOException | ParseException e) {
+            } catch (IOException e) {
                 logger.error(e.getMessage());
             }
             return fileName;

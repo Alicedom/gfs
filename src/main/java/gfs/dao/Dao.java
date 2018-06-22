@@ -1,16 +1,13 @@
 package gfs.dao;
 
 
-
 import gfs.controller.Utils;
 import gfs.model.Gfs025;
 import gfs.model.Station;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.security.UnresolvedPermission;
 import java.sql.*;
-import java.sql.Date;
 import java.text.ParseException;
 import java.util.*;
 
@@ -20,7 +17,7 @@ public class Dao {
     private Connection conn = null;
 
 
-    private String hostName = "172.16.0.252";
+    private String hostName = "localhost";
     private String dbName = "fieldclimate";
     private String userName = "root";
     private String password = "123456aA";
@@ -45,15 +42,13 @@ public class Dao {
         return conn;
     }
 
-    public void close(){
+    public void close() {
         try {
             conn.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-
-
 
 
     public ArrayList<Station> getStationEnalbeApi() {
@@ -86,15 +81,15 @@ public class Dao {
         } catch (SQLException e) {
             logger.error(e.getMessage());
         }
-        logger.info("getnumber active station: "+listStation.size());
+        logger.info("getnumber active station: " + listStation.size());
 
         return listStation;
     }
 
-    public List<String> getAllDir() {
-        List<String> stringArrayList = new ArrayList<String>();
+    public Map<String, Integer> getAllFile(String dir) {
+        Map<String, Integer> stringArrayList = new HashMap();
 
-        String sql = "SELECT DISTINCT (dir) FROM `gfs025_hourly` ORDER BY dir DESC";
+        String sql = "SELECT file FROM `gfs025_hourly` where dir = '" + dir + "'";
 
         Statement statement;
         try {
@@ -103,11 +98,10 @@ public class Dao {
             ResultSet rs = statement.executeQuery(sql);
 
             while (rs.next()) {
-                stringArrayList.add(rs.getString("dir"));
+                stringArrayList.put(rs.getString("file"), 1);
             }
 
             statement.close();
-            conn.close();
 
         } catch (SQLException e) {
             logger.error(e.getMessage());
@@ -117,12 +111,55 @@ public class Dao {
         return stringArrayList;
     }
 
-    public Map<String, Gfs025> getGfs025List(String update_time, int hour_data) {
+    public List<Gfs025> getGfs025List(String dir) {
+        List<Gfs025> gfs025List = new LinkedList<>();
+
+        String sql = "select * from gfs025_hourly where dir ='" + dir + "' group by station_code";
+        Statement statement;
+
+        try {
+            Connection conn = getConn();
+            statement = conn.createStatement();
+            ResultSet rs = statement.executeQuery(sql);
+
+            while (rs.next()) {
+
+                String station_code = rs.getString("station_code");
+                String time = rs.getString("time");
+                String updated_time = rs.getString("updated_time");
+//                String dir = rs.getString("dir");
+                String file = rs.getString("file");
+                double humidity = rs.getDouble("humidity");
+                double temperature = rs.getDouble("temperature");
+                double temperature_surface = rs.getDouble("temperature_surface");
+                double total_liquid = rs.getDouble("total_liquid");
+                double probability = rs.getDouble("probability");
+                double uwind = rs.getDouble("uwind");
+                double vwind = rs.getDouble("vwind");
+                double wind_speed = rs.getDouble("wind_speed");
+                int wind_edge = rs.getInt("wind_edge");
+                String wind_direct = rs.getString("wind_direction");
+
+
+                Gfs025 gfs = new Gfs025(station_code, time, updated_time, dir, file, humidity, temperature, temperature_surface, total_liquid, uwind, vwind, wind_edge, wind_speed, wind_direct);
+                gfs025List.add(gfs);
+            }
+
+            statement.close();
+
+
+        } catch (SQLException e) {
+            logger.error(e.getMessage());
+        }
+        return gfs025List;
+    }
+
+    public Map<String, Gfs025> getGfs025Map(String update_time, int hour_data) {
         Map<String, Gfs025> gfs025List = new HashMap<String, Gfs025>();
 
-        String sql = "SELECT * FROM gfs025_hourly g WHERE file = "+hour_data+" -- exam: get for after 5 hour" +
-                " AND updated_time >= '"+ update_time+"' - INTERVAL 6 HOUR -- less than 1 interval for slow save" +
-                " AND updated_time <  '"+update_time+"' -- get last data after that " +
+        String sql = "SELECT * FROM gfs025_hourly g WHERE file = " + hour_data + " -- exam: get for after 5 hour" +
+                " AND updated_time >= '" + update_time + "' - INTERVAL 6 HOUR -- less than 1 interval for slow save" +
+                " AND updated_time <  '" + update_time + "' -- get last data after that " +
                 " GROUP BY g.station_code, g.time";
 
         Statement statement;
@@ -151,7 +188,7 @@ public class Dao {
                 String wind_direct = rs.getString("wind_direction");
 
 
-                Gfs025 gfs = new Gfs025(station_code,time,updated_time,dir,file,humidity,temperature,temperature_surface,total_liquid,uwind,vwind,wind_edge,wind_speed,wind_direct);
+                Gfs025 gfs = new Gfs025(station_code, time, updated_time, dir, file, humidity, temperature, temperature_surface, total_liquid, uwind, vwind, wind_edge, wind_speed, wind_direct);
                 gfs025List.put(station_code, gfs);
             }
 
@@ -161,31 +198,31 @@ public class Dao {
         } catch (SQLException e) {
             logger.error(e.getMessage());
         }
-        logger.info("getnumber active station: "+gfs025List.size());
+        logger.info("getnumber active station: " + gfs025List.size());
 
         return gfs025List;
     }
 
 
-    public void saveHourlyData(List<Gfs025> gfs025List, String file) throws ParseException {
+    public void saveHourlyData(List<Gfs025> gfs025List, String file, String get_time) throws ParseException {
 
         String sql = "INSERT INTO gfs025_hourly(station_code, time, updated_time, dir, file,"
                 + " humidity, temperature, temperature_surface, total_liquid, probability,"
-                + " uwind, vwind, wind_speed, wind_edge, wind_direction)"
-                + " VALUES (?,?,?,?,? ,?,?,?,?,?, ?,?,?,?,?);";
+                + " uwind, vwind, wind_speed, wind_edge, wind_direction, get_time)"
+                + " VALUES (?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?);";
 
 
         Connection conn = getConn();
         PreparedStatement statement = null;
 
-        for (Gfs025 gfs: gfs025List)  {
+        for (Gfs025 gfs : gfs025List) {
             try {
                 statement = conn.prepareStatement(sql);
                 statement.setString(1, gfs.getStationCode());
                 statement.setString(2, Utils.getForecastTime(file));
-                statement.setTimestamp(3, new Timestamp(Utils.getDate(file)));
+                statement.setTimestamp(3, new Timestamp(Utils.getDirDate(file)));
                 statement.setString(4, Utils.getDir(file));
-                statement.setString(5,Utils.getFile(file));
+                statement.setString(5, Utils.getFile(file));
 
                 statement.setDouble(6, gfs.getRelative_humidity_height_above_ground());
                 statement.setDouble(7, gfs.getTemperature_height_above_ground());
@@ -198,6 +235,7 @@ public class Dao {
                 statement.setDouble(13, gfs.getWind_speed());
                 statement.setDouble(14, gfs.getWind_degree());
                 statement.setString(15, gfs.getWind_direct());
+                statement.setString(16, get_time);
 //                System.out.println("statement = " + statement.toString());
 
                 statement.addBatch();
@@ -205,14 +243,15 @@ public class Dao {
 
             } catch (SQLException e) {
                 logger.info(e.getMessage());
+            } finally {
+                try {
+                    statement.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
-        try {
-            statement.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
 
     }
 

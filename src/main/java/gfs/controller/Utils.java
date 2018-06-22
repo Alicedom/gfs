@@ -18,19 +18,19 @@ public class Utils {
     public static String getForecastTime(String path) throws ParseException {
 
         String filename = getFile(path);
-        Date date = new Date(Utils.getDate(path));
-        Timestamp timeforecast = new Timestamp(date.getTime() + 3600 * 1000 * Integer.parseInt(filename));
+        Date date = new Date(Utils.getDirDate(path));
+        Timestamp timeforecast = new Timestamp(date.getTime() + 3600 * 1000 * (Integer.parseInt(filename)));
         return timeforecast.toString();
     }
 
-    public static long getDate(String path) throws ParseException {
+    public static long getDirDate(String path) throws ParseException {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHH");
         long date = 0;
 
         String parentdir = getDir(path);
         String timedownload = parentdir.substring(4, parentdir.length());
 
-        date = formatter.parse(timedownload).getTime();
+        date = formatter.parse(timedownload).getTime()+ 7*3600*1000; // +UTC
 
         return date;
     }
