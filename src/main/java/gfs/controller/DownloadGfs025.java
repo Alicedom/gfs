@@ -33,35 +33,37 @@ public class DownloadGfs025 {
 
             if (dirFromURL == null || dirFromURL == "") {
                 logger.info("Not found dir on url");
-            } else if (new File(saveFolder + dirFromURL).exists() && (new File(saveFolder + dirFromURL).listFiles().length  >= 3 * numberLink)) {
+            } else if (new File(saveFolder + dirFromURL).exists() && (new File(saveFolder + dirFromURL).listFiles().length >= 3 * (numberLink-1))) {
                 logger.info(dirFromURL + " have enough data!!!");
             } else {
                 logger.info(" get dir " + dirFromURL);
 
                 Dao dao = new Dao();
                 Map<String, Integer> map = dao.getAllFile(dirFromURL);
-                if (map.size() == numberLink) {
+                if (map.size() > numberLink) {
+                    logger.info("data saved over");
+                } else if (map.size() == numberLink) {
                     logger.info("data saved enough");
                 } else {
-                    logger.info(dirFromURL+ " dir save hour "+map.size());
+                    logger.info(dirFromURL + " just have number hour: " + map.size());
 
                     List<String> list = getFileFromURL(numberLink, dirFromURL);
 
                     if (list == null || list.size() == 0) {
-                        logger.info(list.size() + " link  return do not enough: " + numberLink);
+                        logger.info(list.size() + " link  return do not enough: " + (numberLink-1));
                     } else {
                         logger.info(dirFromURL + " number url " + list.size());
 
                         for (int i = 0; i < list.size() && i < numberLink; i++) {
                             if (map.containsKey(i)) {
-
+                                // had data in database
                             } else {
                                 String path = saveFolder + dirFromURL + "/" + String.valueOf(i);
                                 if (new File(path).exists() && new File(path + ".gbx9").exists() && new File(path + ".ncx3").exists()) {
-                                    // have file, don't need to download, try to save data again
+                                    // have file, just try to save data again
                                     new RawGfs025().save(path);
-
                                 } else {
+                                    // download and save
                                     Callable<String> r = new DownloadFileCallable(list.get(i), path, timeOut);
                                     threadPool.submit(r);
                                 }
@@ -121,7 +123,7 @@ public class DownloadGfs025 {
             // no file
         } else {
 
-            // pass analitic file
+            // passed analitic file
             fileURL = fileURL.replace("XXX", dir); // set dir
             for (int i = 1; i < listFile.size(); i++) {
                 String file = listFile.get(i).attr("value");
