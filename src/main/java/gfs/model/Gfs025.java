@@ -68,6 +68,9 @@ public class Gfs025 {
         }
     }
 
+    public static void main(String[] args) {
+        System.out.println("new Gfs025().calculateWindDegree(3,4) = " + new Gfs025().calculateWindDegree(3, 4));;
+    }
 
     public void extractData(){
         calculateWindSpeed(ucomponent_of_wind_height_above_ground,vcomponent_of_wind_height_above_ground);

@@ -39,7 +39,7 @@ public class DownloadGfs025 {
                 logger.info(" get dir " + dirFromURL);
 
                 Dao dao = new Dao();
-                Map<String, Integer> map = dao.getAllFile(dirFromURL);
+                Map<Integer, Integer> map = dao.getAllFile(dirFromURL);
                 if (map.size() > numberLink) {
                     logger.info("data saved over");
                 } else if (map.size() == numberLink) {
@@ -55,8 +55,8 @@ public class DownloadGfs025 {
                         logger.info(dirFromURL + " number url " + list.size());
 
                         for (int i = 0; i < list.size() && i < numberLink; i++) {
-                            if (map.containsKey(i)) {
-                                // had data in database
+                        if (map.containsKey(i)) {
+//                            System.out.println("have data");
                             } else {
                                 String path = saveFolder + dirFromURL + "/" + String.valueOf(i);
                                 if (new File(path).exists() && new File(path + ".gbx9").exists() && new File(path + ".ncx3").exists()) {

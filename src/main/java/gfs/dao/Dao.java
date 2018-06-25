@@ -86,8 +86,8 @@ public class Dao {
         return listStation;
     }
 
-    public Map<String, Integer> getAllFile(String dir) {
-        Map<String, Integer> stringArrayList = new HashMap();
+    public Map<Integer, Integer> getAllFile(String dir) {
+        Map<Integer, Integer> stringArrayList = new HashMap();
 
         String sql = "SELECT file FROM `gfs025_hourly` where dir = '" + dir + "'";
 
@@ -98,7 +98,7 @@ public class Dao {
             ResultSet rs = statement.executeQuery(sql);
 
             while (rs.next()) {
-                stringArrayList.put(rs.getString("file"), 1);
+                stringArrayList.put(rs.getInt("file"), 1);
             }
 
             statement.close();
