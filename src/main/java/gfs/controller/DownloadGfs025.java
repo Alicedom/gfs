@@ -55,7 +55,7 @@ public class DownloadGfs025 {
                         logger.info(dirFromURL + " number url " + list.size());
 
                         for (int i = 0; i < list.size() && i < numberLink; i++) {
-                        if (map.containsKey(i)) {
+                        if (map.containsKey(String.valueOf(i))) {
 //                            System.out.println("have data");
                             } else {
                                 String path = saveFolder + dirFromURL + "/" + String.valueOf(i);
