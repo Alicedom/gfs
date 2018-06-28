@@ -43,19 +43,6 @@ public class Gfs025 {
     }
 
     public void setObjectData(String name, double data){
-//        if(name.equals("Relative_humidity_height_above_ground")){
-//            setRelative_humidity_height_above_ground(data);
-//        }else if(name.equals("Temperature_height_above_ground")){
-//            setTemperature_height_above_ground(data);
-//        }else if(name.equals("Temperature_surface")){
-//            setTemperature_surface(data);
-//        }else if(name.equals("Total_precipitation_surface_1_Hour_Accumulation")){
-//            setTemperature_surface(data);
-//        }else if(name.equals("u-component_of_wind_height_above_ground")){
-//            setucomponent_of_wind_height_above_ground(data);
-//        }else if(name.equals("v-component_of_wind_height_above_ground")){
-//            setvcomponent_of_wind_height_above_ground(data);
-//        }
 
         for (Field field: fields) {
             if(field.getName().equals(name.replace("-",""))){
@@ -66,10 +53,6 @@ public class Gfs025 {
                 }
             }
         }
-    }
-
-    public static void main(String[] args) {
-        System.out.println("new Gfs025().calculateWindDegree(3,4) = " + new Gfs025().calculateWindDegree(3, 4));;
     }
 
     public void extractData(){
