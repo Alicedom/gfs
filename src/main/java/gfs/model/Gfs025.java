@@ -1,11 +1,20 @@
 package gfs.model;
 
 
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
 import java.lang.reflect.Field;
+import java.sql.Timestamp;
 import java.util.Arrays;
 
 public class Gfs025 {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
     private String stationCode;
+//    private Timestamp time;
+//    private Timestamp updateTime;
     private String time;
     private String update_time;
     private String dir;
@@ -20,7 +29,7 @@ public class Gfs025 {
     private double Wind_speed;
     private String Wind_direct;
 
-    private Field[] fields = Gfs025.class.getDeclaredFields();
+    private final Field[] fields = Gfs025.class.getDeclaredFields();
 
     public Gfs025() {
     }
@@ -128,10 +137,6 @@ public class Gfs025 {
 
     public Field[] getFields() {
         return fields;
-    }
-
-    public void setFields(Field[] fields) {
-        this.fields = fields;
     }
 
 
